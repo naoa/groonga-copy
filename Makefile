@@ -1,15 +1,15 @@
 CC = gcc
 CFLAGS = -Wall -O2 -lgroonga -I/usr/include/groonga
 
-all: groonga_copy
+all: groonga-copy
 
 install:
-	install groonga_copy /usr/local/bin
+	install groonga-copy /usr/local/bin
 
 
-groonga_copy : src/groonga_copy.c
-	$(CC) src/groonga_copy.c -o groonga_copy $(CFLAGS)
+groonga-copy : src/groonga-copy.c
+	$(CC) src/groonga-copy.c -o groonga-copy $(CFLAGS)
 
 clean:
-	rm -rf groonga_copy
+	rm -rf groonga-copy
 
