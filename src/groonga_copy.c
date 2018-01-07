@@ -100,7 +100,7 @@ main(int argc, char **argv)
     cursor = grn_table_cursor_open(from_ctx, from_table,
                                    NULL, 0,
                                    NULL, 0,
-                                   2, 1, GRN_CURSOR_ASCENDING);
+                                   0, -1, GRN_CURSOR_ASCENDING);
     if (!cursor) {
       fprintf(stderr, "failed open cursor\n");
       goto exit;
