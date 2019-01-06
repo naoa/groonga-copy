@@ -117,7 +117,9 @@ main(int argc, char **argv)
       grn_obj_get_value(from_ctx, from_column, from_id, &from_value);
 
       to_id = grn_table_add(to_ctx, to_table, key, key_size, NULL);
-      printf("from_id(%u)->to_id(%u)\n", from_id, to_id);
+      if (to_id % 100000 == 0) {
+        printf("from_id(%u)->to_id(%u)\n", from_id, to_id);
+      }
       if (to_id) {
         if (is_reference) {
           switch (from_value.header.type) {
