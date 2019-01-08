@@ -154,7 +154,9 @@ main(int argc, char **argv)
                   grn_vector_add_element(to_ctx, &to_buf, key_name, key_len, weight, GRN_DB_TEXT);
                 }
               }
-              grn_obj_set_value(to_ctx, to_column, to_id, &to_buf, GRN_OBJ_SET);
+              if (n_elements > 0) {
+                grn_obj_set_value(to_ctx, to_column, to_id, &to_buf, GRN_OBJ_SET);
+              }
             }
             break;
           default :
