@@ -25,6 +25,7 @@ main(int argc, char **argv)
     fprintf(stderr, "input: from_db_path from_table from_column to_db_path to_table to_column\n");
     return -1;
   }
+  setvbuf(stdout, (char *)NULL, _IONBF, 0);
   from_path = argv[1];
   from_table_name = argv[2];
   from_column_name = argv[3];
