@@ -74,7 +74,11 @@ main(int argc, char **argv)
     if (grn_obj_is_vector_column(from_ctx, from_column)) {
       flags = GRN_OBJ_VECTOR;
     }
-    GRN_TEXT_INIT(&to_buf, flags);
+    if (ref_table) {
+      GRN_RECORD_INIT(&to_buf, flags, grn_obj_id(from_ctx, ref_table));
+    } else {
+      GRN_TEXT_INIT(&to_buf, flags);
+    }
     if (grn_obj_is_weight_vector_column(from_ctx, from_column)) {
       to_buf.header.flags |= GRN_OBJ_WITH_WEIGHT;
     }
@@ -131,9 +135,10 @@ main(int argc, char **argv)
 
               id = GRN_RECORD_VALUE(&from_value);
               key_len = grn_table_get_key(from_ctx, ref_table, id, key_name, GRN_TABLE_MAX_KEY_SIZE);
-
+              grn_id nid;
+              nid = grn_table_get(from_ctx, ref_table, key_name, key_len);
               GRN_BULK_REWIND(&to_buf);
-              GRN_TEXT_SET(to_ctx, &to_buf, key_name, key_len);
+              GRN_RECORD_SET(to_ctx, &to_buf, nid);
               grn_obj_set_value(to_ctx, to_column, to_id, &to_buf, GRN_OBJ_SET);
             }
             break;
@@ -151,7 +156,11 @@ main(int argc, char **argv)
                   char key_name[GRN_TABLE_MAX_KEY_SIZE];
                   int key_len;
                   key_len = grn_table_get_key(from_ctx, ref_table, id, key_name, GRN_TABLE_MAX_KEY_SIZE);
-                  grn_vector_add_element(to_ctx, &to_buf, key_name, key_len, weight, GRN_DB_TEXT);
+                  grn_id nid;
+                  nid = grn_table_get(from_ctx, ref_table, key_name, key_len);
+                  if (nid) {
+                    grn_uvector_add_element_record(to_ctx, &to_buf, nid, weight);
+                  }
                 }
               }
               if (n_elements > 0) {
