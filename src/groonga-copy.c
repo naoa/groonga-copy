@@ -11,6 +11,7 @@ main(int argc, char **argv)
   grn_obj *from_db = NULL, *from_table = NULL, *from_column = NULL;
   grn_obj *to_db = NULL, *to_table = NULL, *to_column = NULL;
   grn_bool is_reference = GRN_FALSE;
+  grn_bool is_weight_float = GRN_FALSE;
   grn_obj *ref_table = NULL;
   grn_obj to_buf;
   
@@ -20,9 +21,10 @@ main(int argc, char **argv)
   const char *to_path = NULL;
   const char *to_table_name = NULL;
   const char *to_column_name = NULL;
+  bool is_add = false;
   
-  if(argc != 7){
-    fprintf(stderr, "input: from_db_path from_table from_column to_db_path to_table to_column\n");
+  if(argc != 7 || argc != 8){
+    fprintf(stderr, "input: from_db_path from_table from_column to_db_path to_table to_column is_add\n");
     return -1;
   }
   setvbuf(stdout, (char *)NULL, _IONBF, 0);
@@ -32,6 +34,9 @@ main(int argc, char **argv)
   to_path = argv[4];
   to_table_name = argv[5];
   to_column_name = argv[6];
+  if (argc == 8) {
+    is_add = true;
+  }
 
   if (grn_init()) {
     fprintf(stderr, "grn_init() failed\n");
@@ -82,6 +87,11 @@ main(int argc, char **argv)
     }
     if (grn_obj_is_weight_vector_column(from_ctx, from_column)) {
       to_buf.header.flags |= GRN_OBJ_WITH_WEIGHT;
+      grn_column_flags col_flags = grn_column_get_flags(from_ctx, from_column);
+      if (col_flags & GRN_OBJ_WEIGHT_FLOAT32) {
+        is_weight_float = GRN_TRUE;
+        to_buf.header.flags |= GRN_OBJ_WEIGHT_FLOAT32;
+      }
     }
   }
 
@@ -121,11 +131,15 @@ main(int argc, char **argv)
       GRN_BULK_REWIND(&from_value);
       grn_obj_get_value(from_ctx, from_column, from_id, &from_value);
 
-      to_id = grn_table_add(to_ctx, to_table, key, key_size, NULL);
+      if (is_add) {
+        to_id = grn_table_add(to_ctx, to_table, key, key_size, NULL);
+      } else {
+        to_id = grn_table_get(to_ctx, to_table, key, key_size);
+      }
       if (to_id % 100000 == 0) {
         printf("from_id(%u)->to_id(%u)\n", from_id, to_id);
       }
-      if (to_id) {
+      if (to_id != GRN_ID_NIL) {
         if (is_reference) {
           switch (from_value.header.type) {
           case GRN_BULK :
@@ -147,12 +161,17 @@ main(int argc, char **argv)
             {
               int i, n_elements;
               unsigned int weight;
+	      float weight_float;
 
               GRN_BULK_REWIND(&to_buf);
               n_elements = grn_vector_size(from_ctx, &from_value);
               for (i = 0; i < n_elements; i++) {
                 grn_id id;
-                id = grn_uvector_get_element(from_ctx, &from_value, i, &weight);
+                if (is_weight_float) {
+                  id = grn_uvector_get_element_record(from_ctx, &from_value, i, &weight_float);
+                } else {
+                  id = grn_uvector_get_element(from_ctx, &from_value, i, &weight);
+                }
                 {
                   char key_name[GRN_TABLE_MAX_KEY_SIZE];
                   int key_len;
@@ -160,7 +179,11 @@ main(int argc, char **argv)
                   grn_id nid;
                   nid = grn_table_get(from_ctx, ref_table, key_name, key_len);
                   if (nid) {
-                    grn_uvector_add_element_record(to_ctx, &to_buf, nid, weight);
+                    if (is_weight_float) {
+                      grn_uvector_add_element_record(to_ctx, &to_buf, nid, weight_float);
+                    } else {
+                      grn_uvector_add_element(to_ctx, &to_buf, nid, weight);
+                    }
                   }
                 }
               }
