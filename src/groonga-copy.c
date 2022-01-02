@@ -23,7 +23,7 @@ main(int argc, char **argv)
   const char *to_column_name = NULL;
   bool is_add = false;
   
-  if(argc != 7 || argc != 8){
+  if(argc != 7 && argc != 8){
     fprintf(stderr, "input: from_db_path from_table from_column to_db_path to_table to_column is_add\n");
     return -1;
   }
