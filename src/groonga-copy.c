@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <groonga.h>
+#include <time.h>
 
 int
 main(int argc, char **argv)
@@ -12,6 +13,7 @@ main(int argc, char **argv)
   grn_obj *to_db = NULL, *to_table = NULL, *to_column = NULL;
   grn_bool is_reference = GRN_FALSE;
   grn_bool is_weight_float = GRN_FALSE;
+  grn_bool is_time = GRN_FALSE;
   grn_obj *ref_table = NULL;
   grn_obj to_buf;
   
@@ -96,6 +98,11 @@ main(int argc, char **argv)
         to_buf.header.flags |= GRN_OBJ_WEIGHT_FLOAT32;
       }
     }
+    if (ref_table) {
+      if (ref_table->header.domain == GRN_DB_TIME) {
+        is_time = GRN_TRUE;
+      }
+    }
   }
 
   to_table = grn_ctx_get(to_ctx, to_table_name, strlen(to_table_name));
@@ -153,13 +160,27 @@ main(int argc, char **argv)
 
               id = GRN_RECORD_VALUE(&from_value);
               key_len = grn_table_get_key(from_ctx, ref_table, id, key_name, GRN_TABLE_MAX_KEY_SIZE);
-	      /*
-              grn_id nid;
-              nid = grn_table_get(from_ctx, ref_table, key_name, key_len);
-              GRN_BULK_REWIND(&to_buf);
-              GRN_RECORD_SET(to_ctx, &to_buf, nid);
-	      */
-	      GRN_TEXT_SET(to_ctx, &to_buf, key_name, key_len);
+              if (is_time) {
+                struct tm tm;
+                char formatted_time_buffer[4096];
+                size_t formatted_time_size;
+
+                if (grn_time_to_tm(to_ctx, *(int64_t *)&key_name, &tm)) {
+                  formatted_time_size = strftime(formatted_time_buffer,
+                                                 sizeof(formatted_time_buffer),
+                                                 "%Y-%m-%d 00:00:00",
+                                                 &tm);
+	          GRN_TEXT_SET(to_ctx, &to_buf, formatted_time_buffer, formatted_time_size);
+                }
+              } else {
+	        /*
+                grn_id nid;
+                nid = grn_table_get(from_ctx, ref_table, key_name, key_len);
+                GRN_BULK_REWIND(&to_buf);
+                GRN_RECORD_SET(to_ctx, &to_buf, nid);
+	        */
+	        GRN_TEXT_SET(to_ctx, &to_buf, key_name, key_len);
+	      }
               grn_obj_set_value(to_ctx, to_column, to_id, &to_buf, GRN_OBJ_SET);
             }
             break;
@@ -182,10 +203,28 @@ main(int argc, char **argv)
                   char key_name[GRN_TABLE_MAX_KEY_SIZE];
                   int key_len;
                   key_len = grn_table_get_key(from_ctx, ref_table, id, key_name, GRN_TABLE_MAX_KEY_SIZE);
-                  if (is_weight_float) {
-                    grn_vector_add_element_float(to_ctx, &to_buf, key_name, key_len, weight_float, GRN_DB_TEXT);
+                  if (is_time) {
+                    struct tm tm;
+                    char formatted_time_buffer[4096];
+                    size_t formatted_time_size;
+
+                    if (grn_time_to_tm(to_ctx, *(int64_t *)&key_name, &tm)) {
+                      formatted_time_size = strftime(formatted_time_buffer,
+                                                     sizeof(formatted_time_buffer),
+						     "%Y-%m-%d 00:00:00",
+                                                     &tm);
+                      if (is_weight_float) {
+                        grn_vector_add_element_float(to_ctx, &to_buf, formatted_time_buffer, formatted_time_size, weight_float, GRN_DB_TEXT);
+                      } else {
+                        grn_vector_add_element(to_ctx, &to_buf, formatted_time_buffer, formatted_time_size, weight, GRN_DB_TEXT);
+                      }
+		    }
                   } else {
-                    grn_vector_add_element(to_ctx, &to_buf, key_name, key_len, weight, GRN_DB_TEXT);
+                    if (is_weight_float) {
+                      grn_vector_add_element_float(to_ctx, &to_buf, key_name, key_len, weight_float, GRN_DB_TEXT);
+                    } else {
+                      grn_vector_add_element(to_ctx, &to_buf, key_name, key_len, weight, GRN_DB_TEXT);
+                    }
                   }
                   /*
                   grn_id nid;
