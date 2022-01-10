@@ -146,10 +146,10 @@ main(int argc, char **argv)
       } else {
         to_id = grn_table_get(to_ctx, to_table, key, key_size);
       }
-      if (to_id % 100000 == 0) {
-        printf("from_id(%u)->to_id(%u)\n", from_id, to_id);
-      }
       if (to_id != GRN_ID_NIL) {
+        if (to_id % 100000 == 0) {
+          printf("from_id(%u)->to_id(%u)\n", from_id, to_id);
+        }
         if (is_reference) {
           switch (from_value.header.type) {
           case GRN_BULK :
