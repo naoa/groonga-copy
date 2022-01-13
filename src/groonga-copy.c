@@ -221,9 +221,17 @@ main(int argc, char **argv)
 		    }
                   } else {
                     if (is_weight_float) {
-                      grn_vector_add_element_float(to_ctx, &to_buf, key_name, key_len, weight_float, GRN_DB_TEXT);
+                      if (grn_type_id_is_number_family(to_ctx, ref_table->header.domain)) {
+                        grn_vector_add_element_float(to_ctx, &to_buf, key_name, key_len, weight_float, ref_table->header.domain);
+                      } else {
+                        grn_vector_add_element_float(to_ctx, &to_buf, key_name, key_len, weight_float, GRN_DB_TEXT);
+                      }
                     } else {
-                      grn_vector_add_element(to_ctx, &to_buf, key_name, key_len, weight, GRN_DB_TEXT);
+                      if (grn_type_id_is_number_family(to_ctx, ref_table->header.domain)) {
+                        grn_vector_add_element(to_ctx, &to_buf, key_name, key_len, weight, ref_table->header.domain);
+                      } else {
+                        grn_vector_add_element(to_ctx, &to_buf, key_name, key_len, weight, GRN_DB_TEXT);
+                      }
                     }
                   }
                   /*
